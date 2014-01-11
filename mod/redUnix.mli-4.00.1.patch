@@ -1,0 +1,510 @@
+--- redUnix.mli
++++ redUnix.mli
+@@ -11,7 +11,6 @@
+ (*                                                                     *)
+ (***********************************************************************)
+ 
+-(* $Id: unix.mli 12140 2012-02-07 16:41:02Z doligez $ *)
+ 
+ (** Interface to the Unix system *)
+ 
+@@ -174,14 +173,6 @@
+ (** Same as {!Unix.execve}, except that
+    the program is searched in the path. *)
+ 
+-val fork : unit -> int
+-(** Fork a new process. The returned integer is 0 for the child
+-   process, the pid of the child process for the parent process. *)
+-
+-val wait : unit -> int * process_status
+-(** Wait until one of the children processes die, and return its pid
+-   and termination status. *)
+-
+ val waitpid : wait_flag list -> int -> int * process_status
+ (** Same as {!Unix.wait}, but waits for the child process whose pid is given.
+    A pid of [-1] means wait for any child.
+@@ -198,17 +189,6 @@
+    etc. The result [WEXITED 127] indicates that the shell couldn't
+    be executed. *)
+ 
+-val getpid : unit -> int
+-(** Return the pid of the process. *)
+-
+-val getppid : unit -> int
+-(** Return the pid of the parent process. *)
+-
+-val nice : int -> int
+-(** Change the process priority. The integer argument is added to the
+-   ``nice'' value. (Higher values of the ``nice'' value mean
+-   lower priorities.) Return the new nice value. *)
+-
+ 
+ (** {6 Basic file input/output} *)
+ 
+@@ -216,15 +196,6 @@
+ type file_descr
+ (** The abstract type of file descriptors. *)
+ 
+-val stdin : file_descr
+-(** File descriptor for standard input.*)
+-
+-val stdout : file_descr
+-(** File descriptor for standard output.*)
+-
+-val stderr : file_descr
+-(** File descriptor for standard error. *)
+-
+ type open_flag =
+     O_RDONLY                    (** Open for reading *)
+   | O_WRONLY                    (** Open for writing *)
+@@ -279,23 +250,6 @@
+ 
+ 
+ 
+-val in_channel_of_descr : file_descr -> in_channel
+-(** Create an input channel reading from the given descriptor.
+-   The channel is initially in binary mode; use
+-   [set_binary_mode_in ic false] if text mode is desired. *)
+-
+-val out_channel_of_descr : file_descr -> out_channel
+-(** Create an output channel writing on the given descriptor.
+-   The channel is initially in binary mode; use
+-   [set_binary_mode_out oc false] if text mode is desired. *)
+-
+-val descr_of_in_channel : in_channel -> file_descr
+-(** Return the descriptor corresponding to an input channel. *)
+-
+-val descr_of_out_channel : out_channel -> file_descr
+-(** Return the descriptor corresponding to an output channel. *)
+-
+-
+ (** {6 Seeking and truncating} *)
+ 
+ 
+@@ -309,13 +263,6 @@
+ val lseek : file_descr -> int -> seek_command -> int
+ (** Set the current position for a file descriptor *)
+ 
+-val truncate : string -> int -> unit
+-(** Truncates the named file to the given size. *)
+-
+-val ftruncate : file_descr -> int -> unit
+-(** Truncates the file corresponding to the given descriptor
+-   to the given size. *)
+-
+ 
+ (** {6 File status} *)
+ 
+@@ -365,8 +312,6 @@
+ module LargeFile :
+   sig
+     val lseek : file_descr -> int64 -> seek_command -> int64
+-    val truncate : string -> int64 -> unit
+-    val ftruncate : file_descr -> int64 -> unit
+     type stats =
+       { st_dev : int;               (** Device number *)
+         st_ino : int;               (** Inode number *)
+@@ -424,19 +369,6 @@
+ val chmod : string -> file_perm -> unit
+ (** Change the permissions of the named file. *)
+ 
+-val fchmod : file_descr -> file_perm -> unit
+-(** Change the permissions of an opened file. *)
+-
+-val chown : string -> int -> int -> unit
+-(** Change the owner uid and owner gid of the named file. *)
+-
+-val fchown : file_descr -> int -> int -> unit
+-(** Change the owner uid and owner gid of an opened file. *)
+-
+-val umask : int -> int
+-(** Set the process's file mode creation mask, and return the previous
+-    mask. *)
+-
+ val access : string -> access_permission list -> unit
+ (** Check that the process has the given permissions over the named
+    file. Raise [Unix_error] otherwise. *)
+@@ -491,9 +423,6 @@
+ val getcwd : unit -> string
+ (** Return the name of the current working directory. *)
+ 
+-val chroot : string -> unit
+-(** Change the process root directory. *)
+-
+ type dir_handle
+ (** The type of descriptors over opened directories. *)
+ 
+@@ -520,64 +449,10 @@
+    for reading, that's the exit to the pipe. The second component is
+    opened for writing, that's the entrance to the pipe. *)
+ 
+-val mkfifo : string -> file_perm -> unit
+-(** Create a named pipe with the given permissions. *)
+-
+ 
+ (** {6 High-level process and redirection management} *)
+ 
+ 
+-val create_process :
+-  string -> string array -> file_descr -> file_descr -> file_descr -> int
+-(** [create_process prog args new_stdin new_stdout new_stderr]
+-   forks a new process that executes the program
+-   in file [prog], with arguments [args]. The pid of the new
+-   process is returned immediately; the new process executes
+-   concurrently with the current process.
+-   The standard input and outputs of the new process are connected
+-   to the descriptors [new_stdin], [new_stdout] and [new_stderr].
+-   Passing e.g. [stdout] for [new_stdout] prevents the redirection
+-   and causes the new process to have the same standard output
+-   as the current process.
+-   The executable file [prog] is searched in the path.
+-   The new process has the same environment as the current process. *)
+-
+-val create_process_env :
+-  string -> string array -> string array -> file_descr -> file_descr ->
+-    file_descr -> int
+-(** [create_process_env prog args env new_stdin new_stdout new_stderr]
+-   works as {!Unix.create_process}, except that the extra argument
+-   [env] specifies the environment passed to the program. *)
+-
+-
+-val open_process_in : string -> in_channel
+-(** High-level pipe and process management. This function
+-   runs the given command in parallel with the program.
+-   The standard output of the command is redirected to a pipe,
+-   which can be read via the returned input channel.
+-   The command is interpreted by the shell [/bin/sh] (cf. [system]). *)
+-
+-val open_process_out : string -> out_channel
+-(** Same as {!Unix.open_process_in}, but redirect the standard input of
+-   the command to a pipe.  Data written to the returned output channel
+-   is sent to the standard input of the command.
+-   Warning: writes on output channels are buffered, hence be careful
+-   to call {!Pervasives.flush} at the right times to ensure
+-   correct synchronization. *)
+-
+-val open_process : string -> in_channel * out_channel
+-(** Same as {!Unix.open_process_out}, but redirects both the standard input
+-   and standard output of the command to pipes connected to the two
+-   returned channels.  The input channel is connected to the output
+-   of the command, and the output channel to the input of the command. *)
+-
+-val open_process_full :
+-  string -> string array -> in_channel * out_channel * in_channel
+-(** Similar to {!Unix.open_process}, but the second argument specifies
+-   the environment passed to the command.  The result is a triple
+-   of channels connected respectively to the standard output, standard input,
+-   and standard error of the command. *)
+-
+ val close_process_in : in_channel -> process_status
+ (** Close channels opened by {!Unix.open_process_in},
+    wait for the associated command to terminate,
+@@ -600,17 +475,6 @@
+    and return its termination status. *)
+ 
+ 
+-(** {6 Symbolic links} *)
+-
+-
+-val symlink : string -> string -> unit
+-(** [symlink source dest] creates the file [dest] as a symbolic link
+-   to the file [source]. *)
+-
+-val readlink : string -> string
+-(** Read the contents of a link. *)
+-
+-
+ (** {6 Polling} *)
+ 
+ 
+@@ -672,36 +536,6 @@
+    the functions {!Sys.signal} and {!Sys.set_signal}.
+ *)
+ 
+-val kill : int -> int -> unit
+-(** [kill pid sig] sends signal number [sig] to the process
+-   with id [pid]. *)
+-
+-type sigprocmask_command =
+-    SIG_SETMASK
+-  | SIG_BLOCK
+-  | SIG_UNBLOCK
+-
+-val sigprocmask : sigprocmask_command -> int list -> int list
+-(** [sigprocmask cmd sigs] changes the set of blocked signals.
+-   If [cmd] is [SIG_SETMASK], blocked signals are set to those in
+-   the list [sigs].
+-   If [cmd] is [SIG_BLOCK], the signals in [sigs] are added to
+-   the set of blocked signals.
+-   If [cmd] is [SIG_UNBLOCK], the signals in [sigs] are removed
+-   from the set of blocked signals.
+-   [sigprocmask] returns the set of previously blocked signals. *)
+-
+-val sigpending : unit -> int list
+-(** Return the set of blocked signals that are currently pending. *)
+-
+-val sigsuspend : int list -> unit
+-(** [sigsuspend sigs] atomically sets the blocked signals to [sigs]
+-   and waits for a non-ignored, non-blocked signal to be delivered.
+-   On return, the blocked signals are reset to their initial value. *)
+-
+-val pause : unit -> unit
+-(** Wait until a non-ignored, non-blocked signal is delivered. *)
+-
+ 
+ (** {6 Time functions} *)
+ 
+@@ -753,9 +587,6 @@
+    changed into 9 November).  The [tm] argument is interpreted in the
+    local time zone. *)
+ 
+-val alarm : int -> int
+-(** Schedule a [SIGALRM] signal after the given number of seconds. *)
+-
+ val sleep : int -> unit
+ (** Stop execution for the given number of seconds. *)
+ 
+@@ -768,39 +599,6 @@
+    00:00:00 GMT, Jan. 1, 1970.  A time of [0.0] is interpreted as the
+    current time. *)
+ 
+-type interval_timer =
+-    ITIMER_REAL
+-      (** decrements in real time, and sends the signal [SIGALRM] when
+-         expired.*)
+-  | ITIMER_VIRTUAL
+-      (** decrements in process virtual time, and sends [SIGVTALRM]
+-          when expired. *)
+-  | ITIMER_PROF
+-      (** (for profiling) decrements both when the process
+-         is running and when the system is running on behalf of the
+-         process; it sends [SIGPROF] when expired. *)
+-(** The three kinds of interval timers. *)
+-
+-type interval_timer_status =
+-  { it_interval : float;         (** Period *)
+-    it_value : float;            (** Current value of the timer *)
+-  }
+-(** The type describing the status of an interval timer *)
+-
+-val getitimer : interval_timer -> interval_timer_status
+-(** Return the current status of the given interval timer. *)
+-
+-val setitimer :
+-  interval_timer -> interval_timer_status -> interval_timer_status
+-(** [setitimer t s] sets the interval timer [t] and returns
+-   its previous status. The [s] argument is interpreted as follows:
+-   [s.it_value], if nonzero, is the time to the next timer expiration;
+-   [s.it_interval], if nonzero, specifies a value to
+-   be used in reloading it_value when the timer expires.
+-   Setting [s.it_value] to zero disable the timer.
+-   Setting [s.it_interval] to zero causes the timer to be disabled
+-   after its next expiration. *)
+-
+ 
+ (** {6 User id, group id} *)
+ 
+@@ -811,32 +609,16 @@
+ val geteuid : unit -> int
+ (** Return the effective user id under which the process runs. *)
+ 
+-val setuid : int -> unit
+-(** Set the real user id and effective user id for the process. *)
+-
+ val getgid : unit -> int
+ (** Return the group id of the user executing the process. *)
+ 
+ val getegid : unit -> int
+ (** Return the effective group id under which the process runs. *)
+ 
+-val setgid : int -> unit
+-(** Set the real group id and effective group id for the process. *)
+-
+ val getgroups : unit -> int array
+ (** Return the list of groups to which the user executing the process
+    belongs. *)
+ 
+-val setgroups : int array -> unit
+-  (** [setgroups groups] sets the supplementary group IDs for the
+-      calling process. Appropriate privileges are required. *)
+-
+-val initgroups : string -> int -> unit
+-  (** [initgroups user group] initializes the group access list by
+-      reading the group database /etc/group and using all groups of
+-      which [user] is a member. The additional group [group] is also
+-      added to the list. *)
+-
+ type passwd_entry =
+   { pw_name : string;
+     pw_passwd : string;
+@@ -945,10 +727,6 @@
+ val domain_of_sockaddr: sockaddr -> socket_domain
+ (** Return the socket domain adequate for the given socket address. *)
+ 
+-val socketpair :
+-  socket_domain -> socket_type -> int -> file_descr * file_descr
+-(** Create a pair of unnamed sockets, connected together. *)
+-
+ val accept : file_descr -> file_descr * sockaddr
+ (** Accept connections on the given socket. The returned descriptor
+    is a socket connected to the client; the returned address is
+@@ -971,13 +749,6 @@
+ (** The type of commands for [shutdown]. *)
+ 
+ 
+-val shutdown : file_descr -> shutdown_command -> unit
+-(** Shutdown a socket connection. [SHUTDOWN_SEND] as second argument
+-   causes reads on the other end of the connection to return
+-   an end-of-file condition.
+-   [SHUTDOWN_RECEIVE] causes writes on the other end of the connection
+-   to return a closed pipe condition ([SIGPIPE] signal). *)
+-
+ val getsockname : file_descr -> sockaddr
+ (** Return the address of the given socket. *)
+ 
+@@ -1086,27 +857,6 @@
+ (** Return the error condition associated with the given socket,
+     and clear it. *)
+ 
+-(** {6 High-level network connection functions} *)
+-
+-
+-val open_connection : sockaddr -> in_channel * out_channel
+-(** Connect to a server at the given address.
+-   Return a pair of buffered channels connected to the server.
+-   Remember to call {!Pervasives.flush} on the output channel at the right
+-   times to ensure correct synchronization. *)
+-
+-val shutdown_connection : in_channel -> unit
+-(** ``Shut down'' a connection established with {!Unix.open_connection};
+-   that is, transmit an end-of-file condition to the server reading
+-   on the other side of the connection. *)
+-
+-val establish_server : (in_channel -> out_channel -> unit) -> sockaddr -> unit
+-(** Establish a server on the given address.
+-   The function given as first argument is called for each connection
+-   with two buffered channels connected to the client. A new process
+-   is created for each connection. The function {!Unix.establish_server}
+-   never returns normally. *)
+-
+ 
+ (** {6 Host and protocol databases} *)
+ 
+@@ -1221,117 +971,3 @@
+     empty list of options that governs how these names are obtained.
+     Raise [Not_found] if an error occurs. *)
+ 
+-
+-(** {6 Terminal interface} *)
+-
+-
+-(** The following functions implement the POSIX standard terminal
+-   interface. They provide control over asynchronous communication ports
+-   and pseudo-terminals. Refer to the [termios] man page for a
+-   complete description. *)
+-
+-type terminal_io =
+-  {
+-    (* input modes *)
+-    mutable c_ignbrk : bool;  (** Ignore the break condition. *)
+-    mutable c_brkint : bool;  (** Signal interrupt on break condition. *)
+-    mutable c_ignpar : bool;  (** Ignore characters with parity errors. *)
+-    mutable c_parmrk : bool;  (** Mark parity errors. *)
+-    mutable c_inpck : bool;   (** Enable parity check on input. *)
+-    mutable c_istrip : bool;  (** Strip 8th bit on input characters. *)
+-    mutable c_inlcr : bool;   (** Map NL to CR on input. *)
+-    mutable c_igncr : bool;   (** Ignore CR on input. *)
+-    mutable c_icrnl : bool;   (** Map CR to NL on input. *)
+-    mutable c_ixon : bool;    (** Recognize XON/XOFF characters on input. *)
+-    mutable c_ixoff : bool;   (** Emit XON/XOFF chars to control input flow. *)
+-    (* Output modes: *)
+-    mutable c_opost : bool;   (** Enable output processing. *)
+-    (* Control modes: *)
+-    mutable c_obaud : int;    (** Output baud rate (0 means close connection).*)
+-    mutable c_ibaud : int;    (** Input baud rate. *)
+-    mutable c_csize : int;    (** Number of bits per character (5-8). *)
+-    mutable c_cstopb : int;   (** Number of stop bits (1-2). *)
+-    mutable c_cread : bool;   (** Reception is enabled. *)
+-    mutable c_parenb : bool;  (** Enable parity generation and detection. *)
+-    mutable c_parodd : bool;  (** Specify odd parity instead of even. *)
+-    mutable c_hupcl : bool;   (** Hang up on last close. *)
+-    mutable c_clocal : bool;  (** Ignore modem status lines. *)
+-    (* Local modes: *)
+-    mutable c_isig : bool;    (** Generate signal on INTR, QUIT, SUSP. *)
+-    mutable c_icanon : bool;  (** Enable canonical processing
+-                                 (line buffering and editing) *)
+-    mutable c_noflsh : bool;  (** Disable flush after INTR, QUIT, SUSP. *)
+-    mutable c_echo : bool;    (** Echo input characters. *)
+-    mutable c_echoe : bool;   (** Echo ERASE (to erase previous character). *)
+-    mutable c_echok : bool;   (** Echo KILL (to erase the current line). *)
+-    mutable c_echonl : bool;  (** Echo NL even if c_echo is not set. *)
+-    (* Control characters: *)
+-    mutable c_vintr : char;   (** Interrupt character (usually ctrl-C). *)
+-    mutable c_vquit : char;   (** Quit character (usually ctrl-\). *)
+-    mutable c_verase : char;  (** Erase character (usually DEL or ctrl-H). *)
+-    mutable c_vkill : char;   (** Kill line character (usually ctrl-U). *)
+-    mutable c_veof : char;    (** End-of-file character (usually ctrl-D). *)
+-    mutable c_veol : char;    (** Alternate end-of-line char. (usually none). *)
+-    mutable c_vmin : int;     (** Minimum number of characters to read
+-                                 before the read request is satisfied. *)
+-    mutable c_vtime : int;    (** Maximum read wait (in 0.1s units). *)
+-    mutable c_vstart : char;  (** Start character (usually ctrl-Q). *)
+-    mutable c_vstop : char;   (** Stop character (usually ctrl-S). *)
+-  }
+-
+-val tcgetattr : file_descr -> terminal_io
+-(** Return the status of the terminal referred to by the given
+-   file descriptor. *)
+-
+-type setattr_when =
+-    TCSANOW
+-  | TCSADRAIN
+-  | TCSAFLUSH
+-
+-val tcsetattr : file_descr -> setattr_when -> terminal_io -> unit
+-(** Set the status of the terminal referred to by the given
+-   file descriptor. The second argument indicates when the
+-   status change takes place: immediately ([TCSANOW]),
+-   when all pending output has been transmitted ([TCSADRAIN]),
+-   or after flushing all input that has been received but not
+-   read ([TCSAFLUSH]). [TCSADRAIN] is recommended when changing
+-   the output parameters; [TCSAFLUSH], when changing the input
+-   parameters. *)
+-
+-val tcsendbreak : file_descr -> int -> unit
+-(** Send a break condition on the given file descriptor.
+-   The second argument is the duration of the break, in 0.1s units;
+-   0 means standard duration (0.25s). *)
+-
+-val tcdrain : file_descr -> unit
+-(** Waits until all output written on the given file descriptor
+-   has been transmitted. *)
+-
+-type flush_queue =
+-    TCIFLUSH
+-  | TCOFLUSH
+-  | TCIOFLUSH
+-
+-val tcflush : file_descr -> flush_queue -> unit
+-(** Discard data written on the given file descriptor but not yet
+-   transmitted, or data received but not yet read, depending on the
+-   second argument: [TCIFLUSH] flushes data received but not read,
+-   [TCOFLUSH] flushes data written but not transmitted, and
+-   [TCIOFLUSH] flushes both. *)
+-
+-type flow_action =
+-    TCOOFF
+-  | TCOON
+-  | TCIOFF
+-  | TCION
+-
+-val tcflow : file_descr -> flow_action -> unit
+-(** Suspend or restart reception or transmission of data on
+-   the given file descriptor, depending on the second argument:
+-   [TCOOFF] suspends output, [TCOON] restarts output,
+-   [TCIOFF] transmits a STOP character to suspend input,
+-   and [TCION] transmits a START character to restart input. *)
+-
+-val setsid : unit -> int
+-(** Put the calling process in a new session and detach it from
+-   its controlling terminal. *)
