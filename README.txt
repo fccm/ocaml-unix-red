@@ -21,7 +21,7 @@ This reduction can also be evaporated with:
 
  $ make -C mod -f reduces.mk clean
 
-Then the compilation might procceed through the following invocation:
+Then the compilation might proceed through the following invocation:
 
  $ make -C mod -f compiles.mk
 
