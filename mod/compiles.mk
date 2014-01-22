@@ -21,3 +21,8 @@ redUnix.cma: redUnix.cmo
 redUnix.cmxa: redUnix.cmx
 	$(OCAMLOPT) -a -o $@ $<
 
+
+.PHONY: clean
+clean:
+	$(RM) redUnix.cm[ioxa] redUnix.cmx[as]
+
