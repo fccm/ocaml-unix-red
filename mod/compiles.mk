@@ -24,5 +24,5 @@ redUnix.cmxa: redUnix.cmx
 
 .PHONY: clean
 clean:
-	$(RM) redUnix.cm[ioxa] redUnix.cmx[as]
+	$(RM) redUnix.[oa] redUnix.cm[ioxa] redUnix.cmx[as]
 
