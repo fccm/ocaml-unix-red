@@ -8,14 +8,12 @@ CURL = curl -s
 DIGDUMPER = md5sum
 
 .PHONY: all
-all:
-	$(CURL) $(URI) | tar xzf - ocaml-$(VERSION)/otherlibs/unix/unix.mli
-	mv ocaml-$(VERSION)/otherlibs/unix/unix.mli ./unix.mli.$(VERSION)
-	rmdir ocaml-$(VERSION)/otherlibs/unix/
-	rmdir ocaml-$(VERSION)/otherlibs/
-	rmdir ocaml-$(VERSION)/
-	$(DIGDUMPER) ./unix.mli.$(VERSION)
+all: unix.mli.$(VERSION)
+	$(DIGDUMPER) $<
 	cat unix.mli-$(VERSION).md5
+
+unix.mli.$(VERSION):
+	$(CURL) $(URI) | tar xzfO - ocaml-$(VERSION)/otherlibs/unix/unix.mli > $@
 
 .PHONY: clean
 clean:
