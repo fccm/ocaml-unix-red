@@ -1,0 +1,10 @@
+unix.mli.*
+redUnix.mli
+*.[oa]
+*.cm[ioxa]
+*.cmx[as]
+*.byte
+*.opt
+*.exe
+*.NO
+_*
